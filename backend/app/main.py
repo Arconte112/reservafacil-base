@@ -14,7 +14,11 @@ def create_app() -> FastAPI:
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Temporarily allow all origins for development
+        allow_origins=[
+            "http://localhost:3000",  # Local development
+            "https://ykk008o4ssowo4okksoco4g4.automatadr.com",  # Frontend domain
+            "*"  # Allow all for development
+        ],
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
