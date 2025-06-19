@@ -51,7 +51,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
+      target: production
     container_name: reservafacil_frontend
     environment:
       - NEXT_PUBLIC_API_URL=https://ykk008o4ssowo4okksoco4g4.automatadr.com/api/v1
