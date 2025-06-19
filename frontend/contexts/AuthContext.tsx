@@ -42,7 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     formData.append("username", email) // OAuth2PasswordRequestForm uses 'username'
     formData.append("password", password)
 
-    const response = await fetch("http://localhost:8000/api/v1/token", {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
+    const response = await fetch(`${apiUrl}/token`, {
       method: "POST",
       body: formData,
     })
