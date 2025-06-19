@@ -27,7 +27,11 @@ TIMEZONE=America/Santo_Domingo
 # Docker/Node Configuration
 NODE_ENV=production
 NEXT_TELEMETRY_DISABLED=1
+NEXT_PUBLIC_API_URL=${APP_URL}/api/v1
 ```
+
+`NEXT_PUBLIC_API_URL` is baked into the frontend during the Docker build, so
+rebuild the `frontend` service if you update it.
 
 ## Post-Deployment Setup
 

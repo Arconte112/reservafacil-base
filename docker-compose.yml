@@ -52,6 +52,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      args:
+        NEXT_PUBLIC_API_URL: ${APP_URL}/api/v1
     container_name: reservafacil_frontend
     environment:
       - NEXT_PUBLIC_API_URL=${APP_URL}/api/v1
