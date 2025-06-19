@@ -27,7 +27,7 @@ services:
       dockerfile: Dockerfile
     container_name: reservafacil_backend
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/reservas_db
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/reservas_db
       - SECRET_KEY=hsadsagsada
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
