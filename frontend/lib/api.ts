@@ -150,7 +150,7 @@ class ApiClient {
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ status }),
     })
-    return this.handleResponse<any>(response)
+    return this.handleResponse<{ status: string }>(response)
   }
 
   async createReservation(reservation: {
@@ -169,7 +169,7 @@ class ApiClient {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(reservation),
     })
-    return this.handleResponse<any>(response)
+    return this.handleResponse<{ status: string }>(response)
   }
 
   // Tables
@@ -216,7 +216,7 @@ class ApiClient {
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ status }),
     })
-    return this.handleResponse<any>(response)
+    return this.handleResponse<{ status: string }>(response)
   }
 
   async createTable(table: {
@@ -230,7 +230,7 @@ class ApiClient {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(table),
     })
-    return this.handleResponse<any>(response)
+    return this.handleResponse<{ status: string }>(response)
   }
 
   // Configuration
@@ -262,7 +262,7 @@ class ApiClient {
       headers: this.getAuthHeaders(),
       body: JSON.stringify(config),
     })
-    return this.handleResponse<any>(response)
+    return this.handleResponse<{ status: string }>(response)
   }
 
   // Agent endpoints (public)
@@ -295,7 +295,7 @@ class ApiClient {
     })
     return this.handleResponse<{
       success: boolean
-      reservation?: any
+      reservation?: Record<string, unknown>
       message: string
     }>(response)
   }

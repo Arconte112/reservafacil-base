@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -86,11 +86,7 @@ export function Reservations({ restaurantId }: ReservationsProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const itemsPerPage = 10
 
-  useEffect(() => {
-    loadReservations()
-  }, [restaurantId, currentPage, statusFilter, selectedDate, searchTerm])
-
-  const loadReservations = async () => {
+  const loadReservations = useCallback(async () => {
     try {
       setIsLoading(true)
       const dateFilter = selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined
@@ -113,7 +109,11 @@ export function Reservations({ restaurantId }: ReservationsProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [restaurantId, currentPage, statusFilter, selectedDate, searchTerm])
+
+  useEffect(() => {
+    loadReservations()
+  }, [loadReservations])
 
   const handleStatusChange = async (reservationId: number, newStatus: ReservationStatus) => {
     try {

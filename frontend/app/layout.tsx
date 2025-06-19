@@ -25,6 +25,7 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange
+          suppressHydrationWarning
         >
           <AuthProvider>
             {children}

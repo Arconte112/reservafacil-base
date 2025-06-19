@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
@@ -54,11 +53,7 @@ export function Configuration({ restaurantId }: ConfigurationProps) {
     },
   })
 
-  useEffect(() => {
-    loadConfiguration()
-  }, [restaurantId])
-
-  const loadConfiguration = async () => {
+  const loadConfiguration = useCallback(async () => {
     try {
       setIsLoading(true)
       const config = await apiClient.getRestaurantConfig(restaurantId)
@@ -77,7 +72,11 @@ export function Configuration({ restaurantId }: ConfigurationProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [restaurantId, form])
+
+  useEffect(() => {
+    loadConfiguration()
+  }, [loadConfiguration])
 
   const onSubmit = async (data: ConfigFormData) => {
     try {

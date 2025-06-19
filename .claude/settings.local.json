@@ -16,7 +16,10 @@
       "Bash(python3 -m pytest tests/test_agent_service.py::TestAgentService::test_check_availability_restaurant_not_found -v -s)",
       "Bash(python3 -m pytest tests/test_api.py::TestAgentEndpoints::test_check_availability_working_day -v -s)",
       "Bash(python3:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run lint)",
+      "Bash(npm install:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -35,11 +35,7 @@ export function Dashboard({ restaurantId }: DashboardProps) {
   }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    loadDashboardStats()
-  }, [restaurantId])
-
-  const loadDashboardStats = async () => {
+  const loadDashboardStats = useCallback(async () => {
     try {
       setIsLoading(true)
       
@@ -59,7 +55,11 @@ export function Dashboard({ restaurantId }: DashboardProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [restaurantId])
+
+  useEffect(() => {
+    loadDashboardStats()
+  }, [loadDashboardStats])
 
   if (isLoading) {
     return (

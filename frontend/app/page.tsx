@@ -80,7 +80,7 @@ export default function RestaurantApp() {
     if (typeof window !== 'undefined') {
       loadRestaurants()
     }
-  }, [])
+  }, [selectedRestaurant])
 
   return (
     <ProtectedRoute>
