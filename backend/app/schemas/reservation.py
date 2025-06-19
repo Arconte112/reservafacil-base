@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime
 
 
@@ -62,7 +62,7 @@ class AgentAvailabilityRequest(BaseModel):
 
 
 class AgentAvailabilityResponse(BaseModel):
-    available_slots: dict  # {time: [table_numbers]}
+    available_slots: dict  # {time: [table_numbers] or string}
 
 
 class AgentReservationRequest(BaseModel):

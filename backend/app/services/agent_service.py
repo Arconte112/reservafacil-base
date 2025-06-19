@@ -36,6 +36,10 @@ class AgentService:
         # Get timezone
         tz = get_timezone()
         
+        # Get current time in the restaurant's timezone
+        current_datetime = datetime.now(tz)
+        is_today = target_date == current_datetime.date()
+        
         # Get all tables that can accommodate the guests
         tables_result = await db.execute(
             select(Table).where(
@@ -82,16 +86,20 @@ class AgentService:
             # Convert to 12-hour format for response
             slot_time_12h = current_time.strftime("%I:%M %p")
             
-            available_tables_for_slot = []
-            
-            for table in suitable_tables:
-                if AgentService._is_table_available(
-                    table, current_time, reservations, restaurant.table_turnover_minutes, tz
-                ):
-                    available_tables_for_slot.append(table.number)
-            
-            if available_tables_for_slot:
-                available_slots[slot_time_12h] = available_tables_for_slot
+            # Check if this time slot is in the past (only for today)
+            if is_today and current_time.time() <= current_datetime.time():
+                available_slots[slot_time_12h] = "Not available - time has already passed"
+            else:
+                available_tables_for_slot = []
+                
+                for table in suitable_tables:
+                    if AgentService._is_table_available(
+                        table, current_time, reservations, restaurant.table_turnover_minutes, tz
+                    ):
+                        available_tables_for_slot.append(table.number)
+                
+                if available_tables_for_slot:
+                    available_slots[slot_time_12h] = available_tables_for_slot
             
             current_time += timedelta(minutes=30)
         
