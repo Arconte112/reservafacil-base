@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Users, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import { Users, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { apiClient } from "@/lib/api"
 
 interface TablesProps {
   restaurantId: string
@@ -16,155 +17,24 @@ interface TablesProps {
 type TableStatus = "available" | "occupied" | "reserved" | "cleaning"
 
 interface Table {
-  id: string
+  id: number
   number: number
   capacity: number
   status: TableStatus
-  currentReservation?: {
-    customerName: string
-    time: string
+  current_reservation?: {
+    id: number
+    customer_name: string
+    customer_phone: string
+    reservation_datetime: string
     guests: number
-    phone: string
+    status: string
+    special_requests?: string
   }
-  location: string
-  features: string[]
+  location?: string
+  restaurant_id: number
+  created_at?: string
+  updated_at?: string
 }
-
-// Datos simulados de mesas
-const mockTables: Table[] = [
-  {
-    id: "1",
-    number: 1,
-    capacity: 2,
-    status: "occupied",
-    currentReservation: {
-      customerName: "María García",
-      time: "20:00",
-      guests: 2,
-      phone: "+34 666 123 456",
-    },
-    location: "Ventana",
-    features: ["Vista exterior", "Romántica"],
-  },
-  {
-    id: "2",
-    number: 2,
-    capacity: 4,
-    status: "available",
-    location: "Centro",
-    features: ["Familiar"],
-  },
-  {
-    id: "3",
-    number: 3,
-    capacity: 2,
-    status: "reserved",
-    currentReservation: {
-      customerName: "Carlos López",
-      time: "21:30",
-      guests: 2,
-      phone: "+34 666 789 012",
-    },
-    location: "Ventana",
-    features: ["Vista exterior"],
-  },
-  {
-    id: "4",
-    number: 4,
-    capacity: 6,
-    status: "available",
-    location: "Centro",
-    features: ["Grupos", "Espaciosa"],
-  },
-  {
-    id: "5",
-    number: 5,
-    capacity: 4,
-    status: "cleaning",
-    location: "Terraza",
-    features: ["Exterior", "Familiar"],
-  },
-  {
-    id: "6",
-    number: 6,
-    capacity: 8,
-    status: "reserved",
-    currentReservation: {
-      customerName: "Ana Martín",
-      time: "19:30",
-      guests: 6,
-      phone: "+34 666 345 678",
-    },
-    location: "Privado",
-    features: ["Privada", "Empresarial"],
-  },
-  {
-    id: "7",
-    number: 7,
-    capacity: 2,
-    status: "available",
-    location: "Barra",
-    features: ["Informal", "Rápida"],
-  },
-  {
-    id: "8",
-    number: 8,
-    capacity: 4,
-    status: "occupied",
-    currentReservation: {
-      customerName: "Pedro Ruiz",
-      time: "20:30",
-      guests: 3,
-      phone: "+34 666 901 234",
-    },
-    location: "Centro",
-    features: ["Familiar"],
-  },
-  {
-    id: "9",
-    number: 9,
-    capacity: 2,
-    status: "available",
-    location: "Ventana",
-    features: ["Vista exterior", "Romántica"],
-  },
-  {
-    id: "10",
-    number: 10,
-    capacity: 4,
-    status: "reserved",
-    currentReservation: {
-      customerName: "Laura Sánchez",
-      time: "22:00",
-      guests: 4,
-      phone: "+34 666 567 890",
-    },
-    location: "Terraza",
-    features: ["Exterior", "Familiar"],
-  },
-  {
-    id: "11",
-    number: 11,
-    capacity: 6,
-    status: "available",
-    location: "Centro",
-    features: ["Grupos", "Espaciosa"],
-  },
-  {
-    id: "12",
-    number: 12,
-    capacity: 10,
-    status: "occupied",
-    currentReservation: {
-      customerName: "Roberto Silva",
-      time: "19:00",
-      guests: 8,
-      phone: "+34 666 111 222",
-    },
-    location: "Privado",
-    features: ["Privada", "Eventos"],
-  },
-]
 
 const statusColors = {
   available: "bg-green-100 text-green-800 border-green-200",
@@ -191,8 +61,32 @@ export function Tables({ restaurantId }: TablesProps) {
   const [selectedTable, setSelectedTable] = React.useState<Table | null>(null)
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
   const [capacityFilter, setCapacityFilter] = React.useState<string>("all")
+  const [tables, setTables] = React.useState<Table[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
 
-  const filteredTables = mockTables.filter((table) => {
+  // Load tables data
+  React.useEffect(() => {
+    const loadTables = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await apiClient.getTablesWithReservations(restaurantId)
+        setTables(data)
+      } catch (err) {
+        setError("Error al cargar las mesas")
+        console.error("Error loading tables:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (restaurantId) {
+      loadTables()
+    }
+  }, [restaurantId])
+
+  const filteredTables = tables.filter((table) => {
     const matchesStatus = statusFilter === "all" || table.status === statusFilter
     const matchesCapacity =
       capacityFilter === "all" ||
@@ -203,14 +97,58 @@ export function Tables({ restaurantId }: TablesProps) {
   })
 
   const stats = {
-    total: mockTables.length,
-    available: mockTables.filter((t) => t.status === "available").length,
-    occupied: mockTables.filter((t) => t.status === "occupied").length,
-    reserved: mockTables.filter((t) => t.status === "reserved").length,
-    cleaning: mockTables.filter((t) => t.status === "cleaning").length,
+    total: tables.length,
+    available: tables.filter((t) => t.status === "available").length,
+    occupied: tables.filter((t) => t.status === "occupied").length,
+    reserved: tables.filter((t) => t.status === "reserved").length,
+    cleaning: tables.filter((t) => t.status === "cleaning").length,
   }
 
-  const occupancyRate = Math.round(((stats.occupied + stats.reserved) / stats.total) * 100)
+  const occupancyRate = stats.total > 0 ? Math.round(((stats.occupied + stats.reserved) / stats.total) * 100) : 0
+
+  const handleUpdateTableStatus = async (tableId: number, newStatus: string) => {
+    try {
+      await apiClient.updateTableStatus(tableId, newStatus)
+      // Refresh tables data
+      const data = await apiClient.getTablesWithReservations(restaurantId)
+      setTables(data)
+      setSelectedTable(null)
+    } catch (err) {
+      console.error("Error updating table status:", err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Cargando mesas...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-red-600">{error}</p>
+        <Button 
+          onClick={() => window.location.reload()} 
+          className="mt-4"
+          variant="outline"
+        >
+          Reintentar
+        </Button>
+      </div>
+    )
+  }
+
+  const formatReservationTime = (dateTime: string) => {
+    return new Date(dateTime).toLocaleTimeString("es-ES", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -328,21 +266,19 @@ export function Tables({ restaurantId }: TablesProps) {
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span>Capacidad: {table.capacity} personas</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Ubicación:</span>
-                    <span>{table.location}</span>
-                  </div>
+                  {table.location && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Ubicación:</span>
+                      <span>{table.location}</span>
+                    </div>
+                  )}
 
-                  {table.currentReservation && (
+                  {table.current_reservation && (
                     <div className="mt-3 p-2 bg-background/50 rounded">
-                      <p className="font-medium">{table.currentReservation.customerName}</p>
+                      <p className="font-medium">{table.current_reservation.customer_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(`2000-01-01 ${table.currentReservation.time}`).toLocaleTimeString("es-ES", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}{" "}
-                        • {table.currentReservation.guests} personas
+                        {formatReservationTime(table.current_reservation.reservation_datetime)}{" "}
+                        • {table.current_reservation.guests} personas
                       </p>
                     </div>
                   )}
@@ -353,6 +289,12 @@ export function Tables({ restaurantId }: TablesProps) {
         })}
       </div>
 
+      {filteredTables.length === 0 && !loading && (
+        <div className="text-center p-8">
+          <p className="text-muted-foreground">No se encontraron mesas con los filtros seleccionados.</p>
+        </div>
+      )}
+
       {/* Table Details Sheet */}
       <Sheet open={!!selectedTable} onOpenChange={() => setSelectedTable(null)}>
         <SheetContent className="w-[400px] sm:w-[540px]">
@@ -361,7 +303,8 @@ export function Tables({ restaurantId }: TablesProps) {
               <SheetHeader>
                 <SheetTitle>Mesa {selectedTable.number}</SheetTitle>
                 <SheetDescription>
-                  Capacidad: {selectedTable.capacity} personas • {selectedTable.location}
+                  Capacidad: {selectedTable.capacity} personas
+                  {selectedTable.location && ` • ${selectedTable.location}`}
                 </SheetDescription>
               </SheetHeader>
 
@@ -387,25 +330,17 @@ export function Tables({ restaurantId }: TablesProps) {
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <span>Capacidad: {selectedTable.capacity} personas</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Ubicación:</span>
-                      <span className="text-sm">{selectedTable.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Características:</span>
-                      <div className="flex gap-1">
-                        {selectedTable.features.map((feature) => (
-                          <Badge key={feature} variant="secondary" className="text-xs">
-                            {feature}
-                          </Badge>
-                        ))}
+                    {selectedTable.location && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Ubicación:</span>
+                        <span className="text-sm">{selectedTable.location}</span>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Current Reservation */}
-                {selectedTable.currentReservation && (
+                {selectedTable.current_reservation && (
                   <>
                     <Separator />
                     <div className="space-y-4">
@@ -413,29 +348,28 @@ export function Tables({ restaurantId }: TablesProps) {
                       <div className="grid gap-3">
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{selectedTable.currentReservation.customerName}</span>
+                          <span className="font-medium">{selectedTable.current_reservation.customer_name}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            {new Date(`2000-01-01 ${selectedTable.currentReservation.time}`).toLocaleTimeString(
-                              "es-ES",
-                              {
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              },
-                            )}
+                            {formatReservationTime(selectedTable.current_reservation.reservation_datetime)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>{selectedTable.currentReservation.guests} personas</span>
+                          <span>{selectedTable.current_reservation.guests} personas</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">Teléfono:</span>
-                          <span className="text-sm">{selectedTable.currentReservation.phone}</span>
+                          <span className="text-sm">{selectedTable.current_reservation.customer_phone}</span>
                         </div>
+                        {selectedTable.current_reservation.special_requests && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Notas especiales:</span>
+                            <span className="text-sm">{selectedTable.current_reservation.special_requests}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>
@@ -448,19 +382,31 @@ export function Tables({ restaurantId }: TablesProps) {
                   <h3 className="text-lg font-semibold">Acciones</h3>
                   <div className="flex flex-col gap-2">
                     {selectedTable.status === "occupied" && (
-                      <Button className="w-full" variant="outline">
+                      <Button 
+                        className="w-full" 
+                        variant="outline"
+                        onClick={() => handleUpdateTableStatus(selectedTable.id, "available")}
+                      >
                         Liberar Mesa
                       </Button>
                     )}
-                    {selectedTable.status === "cleaning" && <Button className="w-full">Marcar como Disponible</Button>}
+                    {selectedTable.status === "cleaning" && (
+                      <Button 
+                        className="w-full"
+                        onClick={() => handleUpdateTableStatus(selectedTable.id, "available")}
+                      >
+                        Marcar como Disponible
+                      </Button>
+                    )}
                     {selectedTable.status === "available" && (
-                      <Button className="w-full" variant="outline">
+                      <Button 
+                        className="w-full" 
+                        variant="outline"
+                        onClick={() => handleUpdateTableStatus(selectedTable.id, "cleaning")}
+                      >
                         Marcar para Limpieza
                       </Button>
                     )}
-                    <Button variant="outline" className="w-full">
-                      Ver Historial
-                    </Button>
                   </div>
                 </div>
               </div>

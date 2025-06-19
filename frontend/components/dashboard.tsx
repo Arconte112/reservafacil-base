@@ -13,23 +13,6 @@ interface DashboardProps {
 }
 
 
-const weeklyData = [
-  { day: "Lun", reservations: 15 },
-  { day: "Mar", reservations: 22 },
-  { day: "Mié", reservations: 18 },
-  { day: "Jue", reservations: 28 },
-  { day: "Vie", reservations: 35 },
-  { day: "Sáb", reservations: 42 },
-  { day: "Dom", reservations: 38 },
-]
-
-const topCustomers = [
-  { name: "María García", reservations: 12, phone: "+34 666 123 456" },
-  { name: "Carlos López", reservations: 8, phone: "+34 666 789 012" },
-  { name: "Ana Martín", reservations: 6, phone: "+34 666 345 678" },
-  { name: "Pedro Ruiz", reservations: 5, phone: "+34 666 901 234" },
-  { name: "Laura Sánchez", reservations: 4, phone: "+34 666 567 890" },
-]
 
 export function Dashboard({ restaurantId }: DashboardProps) {
   const [kpiData, setKpiData] = useState<{
@@ -38,6 +21,18 @@ export function Dashboard({ restaurantId }: DashboardProps) {
     cancelled_reservations: number
     occupancy_rate: number
   } | null>(null)
+  const [weeklyData, setWeeklyData] = useState<Array<{
+    day: string
+    date: string
+    reservations: number
+    confirmed: number
+  }>>([])
+  const [topCustomers, setTopCustomers] = useState<Array<{
+    name: string
+    email?: string
+    phone?: string
+    total_reservations: number
+  }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -47,8 +42,17 @@ export function Dashboard({ restaurantId }: DashboardProps) {
   const loadDashboardStats = async () => {
     try {
       setIsLoading(true)
-      const stats = await apiClient.getDashboardStats(restaurantId)
+      
+      // Load all dashboard data in parallel
+      const [stats, weekly, customers] = await Promise.all([
+        apiClient.getDashboardStats(restaurantId),
+        apiClient.getWeeklyStats(restaurantId),
+        apiClient.getTopCustomers(restaurantId, 5)
+      ])
+      
       setKpiData(stats)
+      setWeeklyData(weekly)
+      setTopCustomers(customers)
     } catch (error) {
       toast.error("Error loading dashboard data")
       console.error("Error loading dashboard stats:", error)
@@ -182,14 +186,20 @@ export function Dashboard({ restaurantId }: DashboardProps) {
             <CardTitle>Reservas de la Semana</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={weeklyData}>
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="reservations" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
+            {weeklyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={weeklyData}>
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="reservations" fill="hsl(var(--primary))" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px]">
+                <p className="text-muted-foreground">No hay datos de reservas semanales disponibles</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -200,20 +210,26 @@ export function Dashboard({ restaurantId }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topCustomers.map((customer, index) => (
-                <div key={customer.name} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
-                      {index + 1}
+              {topCustomers.length > 0 ? (
+                topCustomers.map((customer, index) => (
+                  <div key={`${customer.name}-${index}`} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{customer.name}</p>
+                        <p className="text-xs text-muted-foreground">{customer.phone || customer.email || "N/A"}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{customer.name}</p>
-                      <p className="text-xs text-muted-foreground">{customer.phone}</p>
-                    </div>
+                    <Badge variant="secondary">{customer.total_reservations} reservas</Badge>
                   </div>
-                  <Badge variant="secondary">{customer.reservations} reservas</Badge>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-4">
+                  No hay datos de clientes frecuentes disponibles
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

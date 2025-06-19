@@ -1,5 +1,5 @@
 from datetime import datetime, date, time, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from app.db.models import Restaurant, Table, Reservation
@@ -131,7 +131,7 @@ class AgentService:
         time_str: str,
         guests: int,
         source: str = "voice"
-    ) -> tuple[bool, Optional[Reservation], str]:
+    ) -> Tuple[bool, Optional[Reservation], str]:
         # Get restaurant by slug
         result = await db.execute(select(Restaurant).where(Restaurant.slug == restaurant_slug))
         restaurant = result.scalar_one_or_none()

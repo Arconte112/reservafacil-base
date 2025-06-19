@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import time
+from datetime import time, datetime
 
 
 class RestaurantBase(BaseModel):
@@ -28,8 +28,8 @@ class RestaurantUpdate(BaseModel):
 
 class Restaurant(RestaurantBase):
     id: int
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

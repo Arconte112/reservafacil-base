@@ -22,6 +22,18 @@ async def get_tables(
     return await TableCRUD.get_tables(db, restaurant_id, skip, limit)
 
 
+@router.get("/tables/with-reservations")
+async def get_tables_with_reservations(
+    restaurant_id: int = Query(..., description="Restaurant ID"),
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(100, ge=1, le=100, description="Number of items to return"),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all tables for a restaurant with current reservation details"""
+    return await TableCRUD.get_tables_with_reservations(db, restaurant_id, skip, limit)
+
+
 @router.get("/tables/{table_id}", response_model=Table)
 async def get_table(
     table_id: int,

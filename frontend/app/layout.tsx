@@ -7,6 +7,9 @@ import { Toaster } from '@/components/ui/toaster'
 export const metadata: Metadata = {
   title: 'RestaurantApp - Dashboard',
   description: 'Restaurant reservation management system',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
@@ -19,8 +22,8 @@ export default function RootLayout({
       <body>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <AuthProvider>

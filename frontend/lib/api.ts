@@ -52,6 +52,54 @@ class ApiClient {
     }>(response)
   }
 
+  async getWeeklyStats(restaurantId: string) {
+    const response = await fetch(
+      `${API_BASE_URL}/dashboard/weekly-stats?restaurant_id=${restaurantId}`,
+      {
+        headers: this.getAuthHeaders(),
+      }
+    )
+    return this.handleResponse<Array<{
+      day: string
+      date: string
+      reservations: number
+      confirmed: number
+    }>>(response)
+  }
+
+  async getTopCustomers(restaurantId: string, limit: number = 5) {
+    const response = await fetch(
+      `${API_BASE_URL}/dashboard/top-customers?restaurant_id=${restaurantId}&limit=${limit}`,
+      {
+        headers: this.getAuthHeaders(),
+      }
+    )
+    return this.handleResponse<Array<{
+      name: string
+      email?: string
+      phone?: string
+      total_reservations: number
+    }>>(response)
+  }
+
+  async getRestaurants() {
+    const response = await fetch(`${API_BASE_URL}/restaurants`, {
+      headers: this.getAuthHeaders(),
+    })
+    return this.handleResponse<Array<{
+      id: number
+      name: string
+      slug: string
+      work_days?: number[]
+      start_time?: string
+      end_time?: string
+      table_turnover_minutes?: number
+      last_booking_cutoff_minutes?: number
+      created_at?: string
+      updated_at?: string
+    }>>(response)
+  }
+
   // Reservations
   async getReservations(params: {
     restaurantId: string
@@ -136,6 +184,29 @@ class ApiClient {
       status: string
       location?: string
       restaurant_id: number
+    }>>(response)
+  }
+
+  async getTablesWithReservations(restaurantId: string) {
+    const response = await fetch(`${API_BASE_URL}/tables/with-reservations?restaurant_id=${restaurantId}`, {
+      headers: this.getAuthHeaders(),
+    })
+    return this.handleResponse<Array<{
+      id: number
+      number: number
+      capacity: number
+      status: string
+      location?: string
+      restaurant_id: number
+      current_reservation?: {
+        id: number
+        customer_name: string
+        customer_phone: string
+        reservation_datetime: string
+        guests: number
+        status: string
+        special_requests?: string
+      }
     }>>(response)
   }
 

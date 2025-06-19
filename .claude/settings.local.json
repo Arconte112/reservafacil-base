@@ -3,7 +3,20 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(touch:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pip install:*)",
+      "Bash(python3 -m pytest tests/ -v)",
+      "Bash(python3 -m pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(~/.local/bin/pip install email-validator)",
+      "Bash(rg:*)",
+      "Bash(python3 -m pytest tests/ -v --asyncio-mode=auto)",
+      "Bash(python -m pytest tests/test_agent_service.py -v)",
+      "Bash(python3 -m pytest tests/test_agent_service.py -v)",
+      "Bash(python3 -m pytest tests/test_agent_service.py::TestAgentService::test_check_availability_restaurant_not_found -v -s)",
+      "Bash(python3 -m pytest tests/test_api.py::TestAgentEndpoints::test_check_availability_working_day -v -s)",
+      "Bash(python3:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

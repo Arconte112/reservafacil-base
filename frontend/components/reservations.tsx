@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Calendar } from "@/components/ui/calendar"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Pagination,
   PaginationContent,
@@ -17,8 +19,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Search, Filter, Phone, CalendarIcon, Users, FileText, Clock, Bot, Mic } from "lucide-react"
+import { Search, Filter, Phone, CalendarIcon, Users, FileText, Clock, Bot, Mic, Loader2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { apiClient } from "@/lib/api"
+import { toast } from "sonner"
+import { format } from "date-fns"
 
 interface ReservationsProps {
   restaurantId: string
@@ -28,111 +33,19 @@ type ReservationStatus = "pending" | "confirmed" | "cancelled" | "completed"
 type ReservationSource = "voice" | "chat" | "manual"
 
 interface Reservation {
-  id: string
-  date: string
-  time: string
-  customerName: string
+  id: number
+  customer_name: string
+  customer_phone: string
+  customer_email?: string
+  reservation_datetime: string
   guests: number
   status: ReservationStatus
   source: ReservationSource
-  notes: string
-  phone: string
-  email: string
-  specialRequests: string
-  tableNumber?: number
-  createdAt: string
+  notes?: string
+  special_requests?: string
+  table_number?: number
+  created_at: string
 }
-
-// Datos simulados con fuente de reserva
-const mockReservations: Reservation[] = [
-  {
-    id: "1",
-    date: "2024-01-15",
-    time: "20:00",
-    customerName: "María García",
-    guests: 4,
-    status: "confirmed",
-    source: "voice",
-    notes: "Mesa junto a la ventana",
-    phone: "+34 666 123 456",
-    email: "maria@email.com",
-    specialRequests: "Vegetariano, sin gluten",
-    tableNumber: 5,
-    createdAt: "2024-01-14 15:30",
-  },
-  {
-    id: "2",
-    date: "2024-01-15",
-    time: "19:30",
-    customerName: "Carlos López",
-    guests: 2,
-    status: "pending",
-    source: "chat",
-    notes: "Aniversario",
-    phone: "+34 666 789 012",
-    email: "carlos@email.com",
-    specialRequests: "Postre especial",
-    createdAt: "2024-01-15 10:15",
-  },
-  {
-    id: "3",
-    date: "2024-01-15",
-    time: "21:00",
-    customerName: "Ana Martín",
-    guests: 6,
-    status: "confirmed",
-    source: "voice",
-    notes: "Cena de empresa",
-    phone: "+34 666 345 678",
-    email: "ana@email.com",
-    specialRequests: "Factura a nombre de empresa",
-    tableNumber: 12,
-    createdAt: "2024-01-14 09:45",
-  },
-  {
-    id: "4",
-    date: "2024-01-16",
-    time: "20:30",
-    customerName: "Pedro Ruiz",
-    guests: 3,
-    status: "cancelled",
-    source: "chat",
-    notes: "Cancelado por enfermedad",
-    phone: "+34 666 901 234",
-    email: "pedro@email.com",
-    specialRequests: "",
-    createdAt: "2024-01-15 14:20",
-  },
-  {
-    id: "5",
-    date: "2024-01-16",
-    time: "19:00",
-    customerName: "Laura Sánchez",
-    guests: 2,
-    status: "pending",
-    source: "voice",
-    notes: "Primera visita",
-    phone: "+34 666 567 890",
-    email: "laura@email.com",
-    specialRequests: "Alergia a mariscos",
-    createdAt: "2024-01-16 08:30",
-  },
-  {
-    id: "6",
-    date: "2024-01-17",
-    time: "13:00",
-    customerName: "Roberto Silva",
-    guests: 4,
-    status: "confirmed",
-    source: "chat",
-    notes: "Almuerzo familiar",
-    phone: "+34 666 111 222",
-    email: "roberto@email.com",
-    specialRequests: "Silla alta para niño",
-    tableNumber: 8,
-    createdAt: "2024-01-16 16:45",
-  },
-]
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -161,32 +74,123 @@ const sourceLabels = {
 }
 
 export function Reservations({ restaurantId }: ReservationsProps) {
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState<string>("all")
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date())
-  const [selectedReservation, setSelectedReservation] = React.useState<Reservation | null>(null)
-  const [currentPage, setCurrentPage] = React.useState(1)
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalReservations, setTotalReservations] = useState(0)
+  const [isUpdating, setIsUpdating] = useState(false)
   const itemsPerPage = 10
 
-  const filteredReservations = mockReservations.filter((reservation) => {
-    const matchesSearch = reservation.customerName.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || reservation.status === statusFilter
-    const matchesDate = !selectedDate || reservation.date === selectedDate.toISOString().split("T")[0]
-    return matchesSearch && matchesStatus && matchesDate
-  })
+  useEffect(() => {
+    loadReservations()
+  }, [restaurantId, currentPage, statusFilter, selectedDate, searchTerm])
 
-  const totalPages = Math.ceil(filteredReservations.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedReservations = filteredReservations.slice(startIndex, startIndex + itemsPerPage)
+  const loadReservations = async () => {
+    try {
+      setIsLoading(true)
+      const dateFilter = selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined
+      
+      const response = await apiClient.getReservations({
+        restaurantId,
+        page: currentPage,
+        limit: itemsPerPage,
+        dateFilter,
+        statusFilter: statusFilter === "all" ? undefined : statusFilter,
+        search: searchTerm || undefined,
+      })
 
-  const handleStatusChange = (reservationId: string, newStatus: ReservationStatus) => {
-    console.log(`Updating reservation ${reservationId} to ${newStatus}`)
-    setSelectedReservation(null)
+      setReservations(response.items)
+      setTotalPages(response.pages)
+      setTotalReservations(response.total)
+    } catch (error) {
+      toast.error("Error loading reservations")
+      console.error("Error loading reservations:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const todayReservations = mockReservations.filter((r) => r.date === new Date().toISOString().split("T")[0])
-  const pendingCount = todayReservations.filter((r) => r.status === "pending").length
-  const confirmedCount = todayReservations.filter((r) => r.status === "confirmed").length
+  const handleStatusChange = async (reservationId: number, newStatus: ReservationStatus) => {
+    try {
+      setIsUpdating(true)
+      await apiClient.updateReservationStatus(reservationId, newStatus)
+      
+      // Update local state
+      setReservations(prev => 
+        prev.map(res => 
+          res.id === reservationId 
+            ? { ...res, status: newStatus }
+            : res
+        )
+      )
+      
+      // Update selected reservation if it's the one being updated
+      if (selectedReservation?.id === reservationId) {
+        setSelectedReservation(prev => prev ? { ...prev, status: newStatus } : null)
+      }
+      
+      toast.success(`Reservation ${statusLabels[newStatus].toLowerCase()}`)
+    } catch (error) {
+      toast.error("Error updating reservation status")
+      console.error("Error updating reservation:", error)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const formatDateTime = (dateTimeString: string) => {
+    const date = new Date(dateTimeString)
+    return {
+      date: format(date, "dd/MM/yyyy"),
+      time: format(date, "hh:mm a")
+    }
+  }
+
+  if (isLoading && reservations.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-[100px]" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
+          
+          <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex gap-4">
+                  <Skeleton className="h-10 flex-1" />
+                  <Skeleton className="h-10 w-[180px]" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-[200px]" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -197,7 +201,12 @@ export function Reservations({ restaurantId }: ReservationsProps) {
             <CardTitle>Calendario</CardTitle>
           </CardHeader>
           <CardContent>
-            <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} className="rounded-md border" />
+            <Calendar 
+              mode="single" 
+              selected={selectedDate} 
+              onSelect={setSelectedDate} 
+              className="rounded-md border" 
+            />
           </CardContent>
         </Card>
 
@@ -237,92 +246,112 @@ export function Reservations({ restaurantId }: ReservationsProps) {
           <Card>
             <CardHeader>
               <CardTitle>
-                Reservas para {selectedDate?.toLocaleDateString("es-ES") || "Hoy"} ({filteredReservations.length})
+                Reservas para {selectedDate?.toLocaleDateString("es-ES") || "Hoy"} ({totalReservations})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Personas</TableHead>
-                    <TableHead>Mesa</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fuente</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedReservations.map((reservation) => {
-                    const SourceIcon = sourceIcons[reservation.source]
-                    return (
-                      <TableRow
-                        key={reservation.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedReservation(reservation)}
-                      >
-                        <TableCell className="font-medium">
-                          {new Date(reservation.date).toLocaleDateString("es-ES")}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {new Date(`2000-01-01 ${reservation.time}`).toLocaleTimeString("es-ES", {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })}
-                        </TableCell>
-                        <TableCell>{reservation.customerName}</TableCell>
-                        <TableCell>{reservation.guests}</TableCell>
-                        <TableCell>{reservation.tableNumber ? `Mesa ${reservation.tableNumber}` : "-"}</TableCell>
-                        <TableCell>
-                          <Badge className={statusColors[reservation.status]}>{statusLabels[reservation.status]}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <SourceIcon className="h-4 w-4" />
-                            <span className="text-sm">{sourceLabels[reservation.source]}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{reservation.phone}</TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-4">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(page)}
-                            isActive={currentPage === page}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+              {isLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
+              ) : reservations.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No se encontraron reservas para los filtros seleccionados
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Fecha/Hora</TableHead>
+                        <TableHead>Personas</TableHead>
+                        <TableHead>Mesa</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Fuente</TableHead>
+                        <TableHead>Teléfono</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reservations.map((reservation) => {
+                        const SourceIcon = sourceIcons[reservation.source]
+                        const { date, time } = formatDateTime(reservation.reservation_datetime)
+                        
+                        return (
+                          <TableRow
+                            key={reservation.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setSelectedReservation(reservation)}
+                          >
+                            <TableCell className="font-medium">
+                              {reservation.customer_name}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>{date}</div>
+                                <div className="text-muted-foreground">{time}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{reservation.guests}</TableCell>
+                            <TableCell>
+                              {reservation.table_number ? `Mesa ${reservation.table_number}` : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={statusColors[reservation.status]}>
+                                {statusLabels[reservation.status]}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <SourceIcon className="h-4 w-4" />
+                                <span className="text-sm">{sourceLabels[reservation.source]}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{reservation.customer_phone}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="mt-4">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            const pageNum = i + 1
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  isActive={currentPage === pageNum}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          })}
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -348,16 +377,18 @@ export function Reservations({ restaurantId }: ReservationsProps) {
                   <div className="grid gap-3">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{selectedReservation.customerName}</span>
+                      <span className="font-medium">{selectedReservation.customer_name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedReservation.phone}</span>
+                      <span>{selectedReservation.customer_phone}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Email:</span>
-                      <span className="text-sm">{selectedReservation.email}</span>
-                    </div>
+                    {selectedReservation.customer_email && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Email:</span>
+                        <span className="text-sm">{selectedReservation.customer_email}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -367,28 +398,29 @@ export function Reservations({ restaurantId }: ReservationsProps) {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Detalles de la Reserva</h3>
                   <div className="grid gap-3">
-                    <div className="flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                      <span>{new Date(selectedReservation.date).toLocaleDateString("es-ES")}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                        {new Date(`2000-01-01 ${selectedReservation.time}`).toLocaleTimeString("es-ES", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}
-                      </span>
-                    </div>
+                    {(() => {
+                      const { date, time } = formatDateTime(selectedReservation.reservation_datetime)
+                      return (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            <span>{date}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span>{time}</span>
+                          </div>
+                        </>
+                      )
+                    })()}
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <span>{selectedReservation.guests} personas</span>
                     </div>
-                    {selectedReservation.tableNumber && (
+                    {selectedReservation.table_number && (
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Mesa:</span>
-                        <span className="text-sm font-medium">Mesa {selectedReservation.tableNumber}</span>
+                        <span className="text-sm font-medium">Mesa {selectedReservation.table_number}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -404,10 +436,6 @@ export function Reservations({ restaurantId }: ReservationsProps) {
                         <span className="text-sm">{sourceLabels[selectedReservation.source]}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Creada:</span>
-                      <span className="text-sm">{new Date(selectedReservation.createdAt).toLocaleString("es-ES")}</span>
-                    </div>
                   </div>
                 </div>
 
@@ -422,12 +450,14 @@ export function Reservations({ restaurantId }: ReservationsProps) {
                         <FileText className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Notas:</span>
                       </div>
-                      <p className="text-sm text-muted-foreground pl-6">{selectedReservation.notes || "Sin notas"}</p>
+                      <p className="text-sm text-muted-foreground pl-6">
+                        {selectedReservation.notes || "Sin notas"}
+                      </p>
                     </div>
                     <div>
                       <span className="text-sm font-medium">Solicitudes especiales:</span>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {selectedReservation.specialRequests || "Ninguna"}
+                        {selectedReservation.special_requests || "Ninguna"}
                       </p>
                     </div>
                   </div>
@@ -443,8 +473,16 @@ export function Reservations({ restaurantId }: ReservationsProps) {
                       <Button
                         onClick={() => handleStatusChange(selectedReservation.id, "confirmed")}
                         className="w-full"
+                        disabled={isUpdating}
                       >
-                        Confirmar Reserva
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Actualizando...
+                          </>
+                        ) : (
+                          "Confirmar Reserva"
+                        )}
                       </Button>
                     )}
                     {selectedReservation.status === "confirmed" && (
@@ -452,8 +490,16 @@ export function Reservations({ restaurantId }: ReservationsProps) {
                         onClick={() => handleStatusChange(selectedReservation.id, "completed")}
                         className="w-full"
                         variant="outline"
+                        disabled={isUpdating}
                       >
-                        Marcar como Completada
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Actualizando...
+                          </>
+                        ) : (
+                          "Marcar como Completada"
+                        )}
                       </Button>
                     )}
                     {selectedReservation.status !== "cancelled" && selectedReservation.status !== "completed" && (
@@ -461,8 +507,16 @@ export function Reservations({ restaurantId }: ReservationsProps) {
                         variant="destructive"
                         onClick={() => handleStatusChange(selectedReservation.id, "cancelled")}
                         className="w-full"
+                        disabled={isUpdating}
                       >
-                        Cancelar Reserva
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Actualizando...
+                          </>
+                        ) : (
+                          "Cancelar Reserva"
+                        )}
                       </Button>
                     )}
                   </div>

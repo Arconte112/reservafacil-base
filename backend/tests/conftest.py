@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 from httpx import AsyncClient
@@ -27,15 +28,11 @@ TestingSessionLocal = async_sessionmaker(
 )
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+# Removed custom event_loop fixture to use pytest-asyncio default
+# This prevents scope conflicts with function-scoped async fixtures
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session():
     """Create a fresh database session for each test."""
     async with test_engine.begin() as conn:
@@ -48,13 +45,13 @@ async def db_session():
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def app():
     """Create a test FastAPI app."""
     return create_app()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client(app, db_session):
     """Create a test client with database session override."""
     async def override_get_db():
@@ -66,7 +63,7 @@ async def client(app, db_session):
         yield ac
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_user(db_session):
     """Create a test user."""
     user = User(
@@ -79,7 +76,7 @@ async def test_user(db_session):
     return user
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_restaurant(db_session):
     """Create a test restaurant."""
     restaurant = Restaurant(
@@ -97,7 +94,7 @@ async def test_restaurant(db_session):
     return restaurant
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_tables(db_session, test_restaurant):
     """Create test tables."""
     tables = [
@@ -117,7 +114,7 @@ async def test_tables(db_session, test_restaurant):
     return tables
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def auth_headers(client, test_user):
     """Get authentication headers for test user."""
     login_data = {

@@ -23,12 +23,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
-const restaurants = [
-  { id: "1", name: "Restaurante Central" },
-  { id: "2", name: "Bistro Norte" },
-  { id: "3", name: "Café del Sur" },
-]
+import { apiClient } from "@/lib/api"
 
 const navigation = [
   {
@@ -55,8 +50,37 @@ const navigation = [
 
 export default function RestaurantApp() {
   const [activeView, setActiveView] = React.useState("dashboard")
-  const [selectedRestaurant, setSelectedRestaurant] = React.useState("1")
+  const [selectedRestaurant, setSelectedRestaurant] = React.useState("")
+  const [restaurants, setRestaurants] = React.useState<Array<{
+    id: number
+    name: string
+    slug: string
+  }>>([])
+  const [loadingRestaurants, setLoadingRestaurants] = React.useState(true)
   const { user, logout } = useAuth()
+
+  React.useEffect(() => {
+    const loadRestaurants = async () => {
+      try {
+        setLoadingRestaurants(true)
+        const data = await apiClient.getRestaurants()
+        setRestaurants(data)
+        // Set the first restaurant as default if available
+        if (data.length > 0 && !selectedRestaurant) {
+          setSelectedRestaurant(data[0].id.toString())
+        }
+      } catch (error) {
+        console.error("Error loading restaurants:", error)
+      } finally {
+        setLoadingRestaurants(false)
+      }
+    }
+
+    // Only load restaurants on client side to avoid hydration mismatch
+    if (typeof window !== 'undefined') {
+      loadRestaurants()
+    }
+  }, [])
 
   return (
     <ProtectedRoute>
@@ -96,13 +120,17 @@ export default function RestaurantApp() {
           <Separator orientation="vertical" className="mr-2 h-4" />
 
           <div className="flex items-center gap-4 flex-1">
-            <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+            <Select 
+              value={selectedRestaurant} 
+              onValueChange={setSelectedRestaurant}
+              disabled={loadingRestaurants}
+            >
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Seleccionar restaurante" />
+                <SelectValue placeholder={loadingRestaurants ? "Cargando..." : "Seleccionar restaurante"} />
               </SelectTrigger>
               <SelectContent>
                 {restaurants.map((restaurant) => (
-                  <SelectItem key={restaurant.id} value={restaurant.id}>
+                  <SelectItem key={restaurant.id} value={restaurant.id.toString()}>
                     {restaurant.name}
                   </SelectItem>
                 ))}
@@ -134,10 +162,20 @@ export default function RestaurantApp() {
         </header>
 
         <main className="flex-1 p-6">
-          {activeView === "dashboard" && <Dashboard restaurantId={selectedRestaurant} />}
-          {activeView === "reservations" && <Reservations restaurantId={selectedRestaurant} />}
-          {activeView === "tables" && <Tables restaurantId={selectedRestaurant} />}
-          {activeView === "config" && <Configuration restaurantId={selectedRestaurant} />}
+          {!selectedRestaurant || loadingRestaurants ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">
+                {loadingRestaurants ? "Cargando restaurantes..." : "Selecciona un restaurante para continuar"}
+              </p>
+            </div>
+          ) : (
+            <>
+              {activeView === "dashboard" && <Dashboard restaurantId={selectedRestaurant} />}
+              {activeView === "reservations" && <Reservations restaurantId={selectedRestaurant} />}
+              {activeView === "tables" && <Tables restaurantId={selectedRestaurant} />}
+              {activeView === "config" && <Configuration restaurantId={selectedRestaurant} />}
+            </>
+          )}
         </main>
       </SidebarInset>
     </SidebarProvider>

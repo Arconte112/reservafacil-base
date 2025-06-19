@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, reservations, tables, dashboard, config, agent
+from app.routers import auth, reservations, tables, dashboard, config, agent, restaurants
 from app.core.config import settings
 
 
@@ -14,9 +14,9 @@ def create_app() -> FastAPI:
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:3001"],  # Frontend URLs
+        allow_origins=["*"],  # Temporarily allow all origins for development
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
     app.include_router(tables.router, prefix="/api/v1", tags=["tables"])
     app.include_router(dashboard.router, prefix="/api/v1", tags=["dashboard"])
     app.include_router(config.router, prefix="/api/v1", tags=["configuration"])
+    app.include_router(restaurants.router, prefix="/api/v1", tags=["restaurants"])
 
     @app.get("/")
     async def root():

@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, desc, or_
 from sqlalchemy.orm import selectinload
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime, date
 from app.db.models import User, Restaurant, Table, Reservation
 from app.schemas.auth import UserCreate
@@ -135,6 +135,77 @@ class TableCRUD:
         await db.delete(db_table)
         await db.commit()
         return True
+    
+    @staticmethod
+    async def get_tables_with_reservations(
+        db: AsyncSession, 
+        restaurant_id: int, 
+        skip: int = 0, 
+        limit: int = 100
+    ) -> List[dict]:
+        """Get tables with their current reservation details"""
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        
+        # Get tables
+        tables_result = await db.execute(
+            select(Table)
+            .where(Table.restaurant_id == restaurant_id)
+            .offset(skip)
+            .limit(limit)
+        )
+        tables = tables_result.scalars().all()
+        
+        tables_with_reservations = []
+        for table in tables:
+            # Find current reservation for this table
+            current_reservation = None
+            
+            # Look for reservations in the next 4 hours (typical dining window)
+            window_end = now + timedelta(hours=4)
+            
+            reservation_result = await db.execute(
+                select(Reservation)
+                .where(
+                    and_(
+                        Reservation.table_id == table.id,
+                        Reservation.reservation_datetime >= now,
+                        Reservation.reservation_datetime <= window_end,
+                        Reservation.status.in_(["confirmed", "pending"])
+                    )
+                )
+                .order_by(Reservation.reservation_datetime)
+                .limit(1)
+            )
+            reservation = reservation_result.scalar_one_or_none()
+            
+            if reservation:
+                current_reservation = {
+                    "id": reservation.id,
+                    "customer_name": reservation.customer_name,
+                    "customer_phone": reservation.customer_phone,
+                    "reservation_datetime": reservation.reservation_datetime.isoformat(),
+                    "guests": reservation.guests,
+                    "status": reservation.status,
+                    "special_requests": reservation.special_requests
+                }
+            
+            # Convert table to dict with current reservation
+            table_dict = {
+                "id": table.id,
+                "number": table.number,
+                "capacity": table.capacity,
+                "status": table.status,
+                "location": table.location,
+                "restaurant_id": table.restaurant_id,
+                "created_at": table.created_at.isoformat() if table.created_at else None,
+                "updated_at": table.updated_at.isoformat() if table.updated_at else None,
+                "current_reservation": current_reservation
+            }
+            
+            tables_with_reservations.append(table_dict)
+        
+        return tables_with_reservations
 
 
 class ReservationCRUD:
@@ -155,7 +226,7 @@ class ReservationCRUD:
         search: Optional[str] = None,
         skip: int = 0,
         limit: int = 100
-    ) -> tuple[List[Reservation], int]:
+    ) -> Tuple[List[Reservation], int]:
         query = select(Reservation).options(
             selectinload(Reservation.table)
         ).where(Reservation.restaurant_id == restaurant_id)
@@ -300,3 +371,80 @@ class ReservationCRUD:
             "cancelled_reservations": cancelled_reservations,
             "occupancy_rate": occupancy_rate
         }
+    
+    @staticmethod
+    async def get_weekly_stats(db: AsyncSession, restaurant_id: int) -> List[dict]:
+        """Get weekly reservation statistics for the last 7 days"""
+        from datetime import timedelta
+        today = date.today()
+        week_ago = today - timedelta(days=6)
+        
+        # Get daily counts for the last 7 days
+        weekly_data = []
+        for i in range(7):
+            current_date = week_ago + timedelta(days=i)
+            start_of_day = datetime.combine(current_date, datetime.min.time())
+            end_of_day = datetime.combine(current_date, datetime.max.time())
+            
+            # Count reservations for this day
+            day_result = await db.execute(
+                select(func.count(Reservation.id))
+                .where(
+                    and_(
+                        Reservation.restaurant_id == restaurant_id,
+                        Reservation.reservation_datetime >= start_of_day,
+                        Reservation.reservation_datetime <= end_of_day
+                    )
+                )
+            )
+            reservations_count = day_result.scalar() or 0
+            
+            # Count confirmed reservations for this day
+            confirmed_result = await db.execute(
+                select(func.count(Reservation.id))
+                .where(
+                    and_(
+                        Reservation.restaurant_id == restaurant_id,
+                        Reservation.reservation_datetime >= start_of_day,
+                        Reservation.reservation_datetime <= end_of_day,
+                        Reservation.status == "confirmed"
+                    )
+                )
+            )
+            confirmed_count = confirmed_result.scalar() or 0
+            
+            weekly_data.append({
+                "day": current_date.strftime("%a"),
+                "date": current_date.isoformat(),
+                "reservations": reservations_count,
+                "confirmed": confirmed_count
+            })
+        
+        return weekly_data
+    
+    @staticmethod
+    async def get_top_customers(db: AsyncSession, restaurant_id: int, limit: int = 5) -> List[dict]:
+        """Get top customers by reservation count"""
+        result = await db.execute(
+            select(
+                Reservation.customer_name,
+                Reservation.customer_email,
+                Reservation.customer_phone,
+                func.count(Reservation.id).label("total_reservations")
+            )
+            .where(Reservation.restaurant_id == restaurant_id)
+            .group_by(Reservation.customer_name, Reservation.customer_email, Reservation.customer_phone)
+            .order_by(desc(func.count(Reservation.id)))
+            .limit(limit)
+        )
+        
+        customers = []
+        for row in result:
+            customers.append({
+                "name": row.customer_name,
+                "email": row.customer_email,
+                "phone": row.customer_phone,
+                "total_reservations": row.total_reservations
+            })
+        
+        return customers

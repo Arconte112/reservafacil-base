@@ -4,6 +4,11 @@ from sqlalchemy import pool
 from alembic import context
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import your models here
 from app.db.database import Base
@@ -14,7 +19,7 @@ from app.core.config import settings
 # access to the values within the .ini file in use.
 config = context.config
 
-# Set the SQLAlchemy URL from our settings
+# Set the SQLAlchemy URL from our settings (environment variables)
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # Interpret the config file for Python logging.

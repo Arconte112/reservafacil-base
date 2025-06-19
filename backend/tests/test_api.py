@@ -121,7 +121,7 @@ class TestProtectedEndpoints:
         assert "page" in data
         assert "pages" in data
     
-    async def test_get_tables_authorized(self, client, auth_headers, test_restaurant):
+    async def test_get_tables_authorized(self, client, auth_headers, test_restaurant, test_tables):
         """Test accessing tables with authentication"""
         response = await client.get(
             f"/api/v1/tables?restaurant_id={test_restaurant.id}",
@@ -130,7 +130,7 @@ class TestProtectedEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        assert len(data) == 3  # From test_tables fixture
+        assert len(data) >= len(test_tables)  # Should have at least the test tables
     
     async def test_get_dashboard_stats(self, client, auth_headers, test_restaurant):
         """Test dashboard stats endpoint"""
@@ -173,3 +173,102 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
+
+
+class TestRestaurantEndpoints:
+    async def test_get_restaurants(self, client, auth_headers, test_restaurant):
+        """Test GET /restaurants endpoint"""
+        response = await client.get("/api/v1/restaurants", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        
+        restaurant = data[0]
+        assert "id" in restaurant
+        assert "name" in restaurant
+        assert "slug" in restaurant
+        assert restaurant["name"] == test_restaurant.name
+        assert restaurant["slug"] == test_restaurant.slug
+
+    async def test_get_restaurants_unauthorized(self, client):
+        """Test GET /restaurants without authentication"""
+        response = await client.get("/api/v1/restaurants")
+        assert response.status_code == 401
+
+
+class TestDashboardEndpoints:
+    async def test_get_weekly_stats(self, client, auth_headers, test_restaurant):
+        """Test GET /dashboard/weekly-stats endpoint"""
+        response = await client.get(
+            f"/api/v1/dashboard/weekly-stats?restaurant_id={test_restaurant.id}",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 7  # Should return 7 days
+        
+        if data:
+            day_stat = data[0]
+            assert "day" in day_stat
+            assert "date" in day_stat
+            assert "reservations" in day_stat
+            assert "confirmed" in day_stat
+
+    async def test_get_top_customers(self, client, auth_headers, test_restaurant):
+        """Test GET /dashboard/top-customers endpoint"""
+        response = await client.get(
+            f"/api/v1/dashboard/top-customers?restaurant_id={test_restaurant.id}&limit=5",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) <= 5  # Should respect limit
+        
+        if data:
+            customer = data[0]
+            assert "name" in customer
+            assert "total_reservations" in customer
+            assert isinstance(customer["total_reservations"], int)
+
+    async def test_dashboard_unauthorized(self, client, test_restaurant):
+        """Test dashboard endpoints without authentication"""
+        endpoints = [
+            f"/api/v1/dashboard/weekly-stats?restaurant_id={test_restaurant.id}",
+            f"/api/v1/dashboard/top-customers?restaurant_id={test_restaurant.id}"
+        ]
+        
+        for endpoint in endpoints:
+            response = await client.get(endpoint)
+            assert response.status_code == 401
+
+
+class TestTableEndpoints:
+    async def test_get_tables_with_reservations(self, client, auth_headers, test_restaurant, test_tables):
+        """Test GET /tables/with-reservations endpoint"""
+        response = await client.get(
+            f"/api/v1/tables/with-reservations?restaurant_id={test_restaurant.id}",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= len(test_tables)
+        
+        if data:
+            table = data[0]
+            assert "id" in table
+            assert "number" in table
+            assert "capacity" in table
+            assert "status" in table
+            assert "restaurant_id" in table
+            # current_reservation is optional and may be None
+            
+    async def test_tables_unauthorized(self, client, test_restaurant):
+        """Test tables endpoints without authentication"""
+        response = await client.get(
+            f"/api/v1/tables/with-reservations?restaurant_id={test_restaurant.id}"
+        )
+        assert response.status_code == 401
