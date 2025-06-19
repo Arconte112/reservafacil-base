@@ -52,7 +52,7 @@ services:
       target: development
     container_name: reservafacil_frontend
     environment:
-      - NEXT_PUBLIC_API_URL=https://q4cwc4ckkcw0wkk8swgwkwgg.automatadr.com/api/v1
+      - NEXT_PUBLIC_API_URL=https://ykk008o4ssowo4okksoco4g4.automatadr.com/api/v1
     ports:
       - "3011:3000"
     depends_on:
