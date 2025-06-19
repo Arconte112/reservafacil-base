@@ -33,7 +33,7 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - TIMEZONE=America/Santo_Domingo
     ports:
-      - "8000:8000"
+      - "8011:8000"
     depends_on:
       postgres:
         condition: service_healthy

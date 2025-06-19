@@ -9,7 +9,7 @@ COPY package*.json ./
 COPY pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN npm install --only=production --legacy-peer-deps
+RUN npm install --only=production --legacy-peer-deps 
 
 # Development stage
 FROM base AS development
