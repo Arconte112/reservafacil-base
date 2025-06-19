@@ -9,7 +9,7 @@ COPY package*.json ./
 COPY pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm install --only=production --legacy-peer-deps
 
 # Development stage
 FROM base AS development
@@ -20,7 +20,7 @@ COPY package*.json ./
 COPY pnpm-lock.yaml* ./
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -40,7 +40,7 @@ COPY package*.json ./
 COPY pnpm-lock.yaml* ./
 
 # Install all dependencies
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
