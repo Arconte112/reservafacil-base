@@ -49,7 +49,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: production
+      target: development
     container_name: reservafacil_frontend
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost/api/v1
