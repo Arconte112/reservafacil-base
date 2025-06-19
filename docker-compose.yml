@@ -44,15 +44,12 @@ services:
       retries: 3
     networks:
       - reservafacil_network
-    volumes:
-      - ./backend:/app
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
+      target: production
     container_name: reservafacil_frontend
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost/api/v1
@@ -62,10 +59,6 @@ services:
       - backend
     networks:
       - reservafacil_network
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
 
   nginx:
     build:
