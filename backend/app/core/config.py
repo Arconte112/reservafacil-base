@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", env="ENVIRONMENT")
     
     class Config:
-        env_file = ".env"
         case_sensitive = False
 
 

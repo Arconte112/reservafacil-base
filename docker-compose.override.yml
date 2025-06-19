@@ -12,11 +12,12 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/reservas_db
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - SECRET_KEY=dev-secret-key-not-for-production
-      - ALGORITHM=HS256
+      - ALGORITHM=${ALGORITHM}
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
-      - TIMEZONE=America/Santo_Domingo
+      - TIMEZONE=${TIMEZONE}
+      - ENVIRONMENT=development
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   frontend:
@@ -31,12 +32,13 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost/api/v1
       - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED}
     command: ["npm", "run", "dev"]
 
   postgres:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: reservas_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
