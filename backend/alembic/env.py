@@ -5,10 +5,7 @@ from alembic import context
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine
 import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+# Environment variables are injected by Docker, no need to load from file
 
 # Import your models here
 from app.db.database import Base

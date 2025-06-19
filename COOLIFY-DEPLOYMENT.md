@@ -72,3 +72,4 @@ Should return available time slots with table numbers.
 1. **Empty JSON response**: Check if sample data was created
 2. **Database connection errors**: Verify DATABASE_URL format
 3. **CORS errors**: Ensure APP_URL matches your domain exactly
+4. **Development override conflict**: The `docker-compose.override.yml` file has been renamed to `.dev` to prevent conflicts in production
