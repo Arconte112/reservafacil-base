@@ -85,6 +85,9 @@ TIMEZONE=America/Santo_Domingo
 NEXT_PUBLIC_API_URL=http://localhost/api/v1
 ```
 
+`NEXT_PUBLIC_API_URL` is read when the frontend image is built. Rebuild the
+container if you change this value.
+
 ## Common Commands
 
 ```bash
