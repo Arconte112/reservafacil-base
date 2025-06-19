@@ -11,14 +11,18 @@ def create_app() -> FastAPI:
         version="1.0.0"
     )
 
-    # CORS middleware
+    # CORS middleware - Configure based on environment
+    cors_origins = settings.cors_origins.split(",") if settings.cors_origins else ["http://localhost:3000"]
+    
+    # In production, be strict with CORS. In development, allow more flexibility
+    if settings.environment == "production":
+        allow_origins = cors_origins
+    else:
+        allow_origins = cors_origins + ["*"]
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",  # Local development
-            "https://ykk008o4ssowo4okksoco4g4.automatadr.com",  # Frontend domain
-            "*"  # Allow all for development
-        ],
+        allow_origins=allow_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],

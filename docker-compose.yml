@@ -32,6 +32,8 @@ services:
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - TIMEZONE=America/Santo_Domingo
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=https://ykk008o4ssowo4okksoco4g4.automatadr.com
     ports:
       - "8011:8000"
     depends_on:
