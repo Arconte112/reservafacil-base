@@ -12,7 +12,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/scripts/setup_database.sql:/docker-entrypoint-initdb.d/setup_database.sql
     ports:
-      - "5432:5432"
+      - "5633:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -73,7 +73,7 @@ services:
       dockerfile: Dockerfile
     container_name: reservafacil_nginx
     ports:
-      - "80:80"
+      - "8130:80"
     depends_on:
       - frontend
       - backend
