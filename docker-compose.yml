@@ -33,7 +33,6 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - TIMEZONE=${TIMEZONE}
       - ENVIRONMENT=${ENVIRONMENT}
-      - CORS_ORIGINS=${APP_URL}
     ports:
       - "8011:8000"
     depends_on:
