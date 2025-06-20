@@ -21,7 +21,11 @@
       "Bash(npm install:*)",
       "Bash(grep:*)",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:coowsgos4w4sg4go48kc0kk8.automatadr.com)"
     ],
     "deny": []
   }

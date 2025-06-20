@@ -8,6 +8,19 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "*.{js,ts,jsx,tsx,mdx}"
   ],
+  safelist: [
+    // Calendar component classes from react-day-picker
+    'rdp-*',
+    'day-*',
+    // Specific calendar classes that might be dynamically generated
+    {
+      pattern: /^(rdp|day|nav_button|caption|table|head|cell)-.*/,
+    },
+    // Button variant classes used by calendar
+    {
+      pattern: /^(bg-|text-|hover:|focus:|border-|rounded-).*/,
+    }
+  ],
   theme: {
   	extend: {
   		colors: {
